@@ -554,6 +554,10 @@
   function finishSession(){
     const day = ROUTINE[currentDayIndex];
     completedDays.add(currentDayIndex);
+    // Al terminar el domingo, la semana se reinicia: se limpian todos los "Hecho"
+    if(currentDayIndex === ROUTINE.length - 1){
+      completedDays.clear();
+    }
     progressFill.style.width = '100%';
     document.getElementById('finishMark').textContent = day.day + ' · Sesión completada';
     document.getElementById('finishTitle').textContent = day.finish.title;
