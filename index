@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MI GYM — Rutina semanal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0B0B0D;
+    --surface:#141416;
+    --surface-2:#1B1B1F;
+    --line:#26262B;
+    --text:#EDEBE8;
+    --muted:#8B8B93;
+    --red:#C42430;
+    --red-deep:#7E1219;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html,body{height:100%;}
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+
+  .display{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+
+  .app{
+    max-width:680px;
+    margin:0 auto;
+    padding:32px 20px 60px;
+    min-height:100%;
+  }
+
+  /* ---------- Barra de progreso global ---------- */
+  .progress-track{
+    position:fixed;
+    top:0;left:0;right:0;
+    height:3px;
+    background:var(--line);
+    z-index:10;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:var(--red);
+    transition:width .35s ease;
+  }
+
+  /* ---------- Cabecera ---------- */
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:36px;
+  }
+  .brand{
+    font-size:1.05rem;
+    font-weight:600;
+    letter-spacing:.22em;
+  }
+  .brand span{color:var(--red);}
+  .header-sub{
+    font-size:.72rem;
+    color:var(--muted);
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+
+  /* ---------- Vistas ---------- */
+  .view{display:none;}
+  .view.active{display:block;animation:fadeUp .35s ease both;}
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(10px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .view.active{animation:none;}
+    .progress-fill{transition:none;}
+  }
+
+  /* ---------- Home: selector de día ---------- */
+  .home-title{
+    font-size:clamp(2rem,6vw,2.8rem);
+    font-weight:600;
+    line-height:1.1;
+    margin-bottom:6px;
+  }
+  .home-title em{
+    font-style:normal;
+    color:var(--red);
+  }
+  .home-sub{
+    color:var(--muted);
+    font-size:.9rem;
+    margin-bottom:32px;
+  }
+
+  .day-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .day-card{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    width:100%;
+    text-align:left;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+    color:var(--text);
+    cursor:pointer;
+    transition:border-color .2s ease, background .2s ease;
+  }
+  .day-card:hover{border-color:var(--red);background:var(--surface-2);}
+  .day-card:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+  .day-abbr{
+    font-family:'Oswald',sans-serif;
+    font-size:1.15rem;
+    font-weight:600;
+    letter-spacing:.1em;
+    color:var(--red);
+    width:52px;
+    flex-shrink:0;
+  }
+  .day-info{flex:1;min-width:0;}
+  .day-focus{
+    font-weight:600;
+    font-size:.98rem;
+  }
+  .day-meta{
+    font-size:.78rem;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .day-arrow{
+    color:var(--muted);
+    font-size:1.1rem;
+    transition:transform .2s ease,color .2s ease;
+  }
+  .day-card:hover .day-arrow{transform:translateX(4px);color:var(--red);}
+  .day-card.done-today .day-abbr{color:var(--muted);}
+  .day-card .day-check{
+    display:none;
+    color:var(--red);
+    font-size:.95rem;
+    margin-left:auto;
+  }
+  .day-card.done-today .day-check{display:inline;}
+  .day-card.done-today .day-arrow{display:none;}
+
+  /* ---------- Sesión ---------- */
+  .session-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:28px;
+  }
+  .btn-ghost{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:.82rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    padding:6px 2px;
+    transition:color .2s ease;
+  }
+  .btn-ghost:hover{color:var(--text);}
+  .btn-ghost:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+
+  .session-day{
+    font-size:.78rem;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--red);
+    font-weight:600;
+  }
+
+  .counter{
+    font-family:'Oswald',sans-serif;
+    font-size:clamp(3.4rem,14vw,5.2rem);
+    font-weight:600;
+    line-height:1;
+    letter-spacing:.02em;
+    color:var(--text);
+    margin-bottom:2px;
+  }
+  .counter .total{
+    color:var(--muted);
+    font-size:.45em;
+    font-weight:400;
+  }
+  .session-focus{
+    color:var(--muted);
+    font-size:.85rem;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    margin-bottom:30px;
+  }
+
+  .exercise-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:3px solid var(--red);
+    border-radius:12px;
+    padding:28px 24px;
+    margin-bottom:24px;
+  }
+  .exercise-name{
+    font-size:clamp(1.4rem,5vw,1.9rem);
+    font-weight:500;
+    line-height:1.2;
+    margin-bottom:12px;
+  }
+  .exercise-detail{
+    font-family:'Oswald',sans-serif;
+    font-size:1.05rem;
+    letter-spacing:.08em;
+    color:var(--red);
+    text-transform:uppercase;
+  }
+  .exercise-note{
+    margin-top:14px;
+    color:var(--muted);
+    font-size:.88rem;
+  }
+
+  .btn-primary{
+    display:block;
+    width:100%;
+    background:var(--red);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:16px;
+    font-family:'Oswald',sans-serif;
+    font-size:1.05rem;
+    font-weight:500;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:background .2s ease,transform .1s ease;
+  }
+  .btn-primary:hover{background:#A81C27;}
+  .btn-primary:active{transform:scale(.99);}
+  .btn-primary:focus-visible{outline:2px solid var(--text);outline-offset:2px;}
+
+  .upnext{
+    margin-top:34px;
+  }
+  .upnext-label{
+    font-size:.72rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:12px;
+  }
+  .upnext-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-size:.9rem;
+    color:var(--muted);
+  }
+  .upnext-item:last-child{border-bottom:none;}
+  .upnext-item .dot{
+    width:5px;height:5px;
+    border-radius:50%;
+    background:var(--line);
+    flex-shrink:0;
+  }
+  .upnext-item.completed{
+    color:#4E4E55;
+    text-decoration:line-through;
+    text-decoration-color:var(--red-deep);
+  }
+  .upnext-item.completed .dot{background:var(--red-deep);}
+
+  /* ---------- Final ---------- */
+  .finish{
+    text-align:center;
+    padding-top:8vh;
+  }
+  .finish-mark{
+    font-family:'Oswald',sans-serif;
+    font-size:.8rem;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:var(--red);
+    margin-bottom:22px;
+  }
+  .finish-title{
+    font-size:clamp(2rem,7vw,3rem);
+    font-weight:600;
+    line-height:1.15;
+    margin-bottom:20px;
+  }
+  .finish-msg{
+    color:var(--muted);
+    font-size:1.02rem;
+    max-width:440px;
+    margin:0 auto 40px;
+  }
+  .finish .btn-primary{max-width:320px;margin:0 auto;}
+  .divider{
+    width:44px;height:2px;
+    background:var(--red);
+    margin:0 auto 26px;
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+
+<div class="app">
+  <header>
+    <div class="brand display">MI<span>/</span>GYM</div>
+    <div class="header-sub">Rutina semanal</div>
+  </header>
+
+  <!-- ===== VISTA: HOME ===== -->
+  <section class="view active" id="viewHome">
+    <h1 class="home-title display">Elige tu <em>día</em></h1>
+    <p class="home-sub">Un ejercicio a la vez. Sin excusas, sin atajos.</p>
+    <div class="day-list" id="dayList"></div>
+  </section>
+
+  <!-- ===== VISTA: SESIÓN ===== -->
+  <section class="view" id="viewSession">
+    <div class="session-top">
+      <button class="btn-ghost" id="btnBack" type="button">&larr; Días</button>
+      <span class="session-day display" id="sessionDay"></span>
+    </div>
+
+    <div class="counter display"><span id="currentNum">01</span><span class="total"> / <span id="totalNum">05</span></span></div>
+    <div class="session-focus" id="sessionFocus"></div>
+
+    <div class="exercise-card">
+      <div class="exercise-name" id="exName"></div>
+      <div class="exercise-detail display" id="exDetail"></div>
+      <div class="exercise-note" id="exNote"></div>
+    </div>
+
+    <button class="btn-primary" id="btnComplete" type="button">Completar ejercicio</button>
+
+    <div class="upnext">
+      <div class="upnext-label">Sesión completa</div>
+      <div id="upnextList"></div>
+    </div>
+  </section>
+
+  <!-- ===== VISTA: FINAL ===== -->
+  <section class="view" id="viewFinish">
+    <div class="finish">
+      <div class="finish-mark" id="finishMark"></div>
+      <h2 class="finish-title display" id="finishTitle"></h2>
+      <div class="divider"></div>
+      <p class="finish-msg" id="finishMsg"></p>
+      <button class="btn-primary" id="btnHome" type="button">Volver a los días</button>
+    </div>
+  </section>
+</div>
+
+<script>
+  const WARMUP = { name:"Calentamiento", detail:"5–8 min caminadora + movilidad", note:"Paso rápido en la caminadora. Círculos de brazos, sentadillas sin peso y rotaciones de cadera." };
+
+  const ROUTINE = [
+    {
+      abbr:"LUN", day:"Lunes", focus:"Empuje — pecho, hombros, tríceps",
+      exercises:[
+        WARMUP,
+        { name:"Press de pecho en el piso", detail:"3 × 10–12", note:"Con barra o mancuernas. Baja controlado, codos a 45°." },
+        { name:"Press militar de pie", detail:"3 × 10", note:"Con mancuernas. Core apretado, sin arquear la espalda baja." },
+        { name:"Aperturas en el piso", detail:"2 × 12", note:"Codos ligeramente flexionados todo el recorrido." },
+        { name:"Elevaciones laterales", detail:"2 × 12–15", note:"Peso liviano. Sube hasta la altura de los hombros, sin balancearte." },
+        { name:"Extensión de tríceps sobre la cabeza", detail:"2 × 12", note:"Una mancuerna a dos manos. Codos apuntando al frente." }
+      ],
+      finish:{ title:"Empuje completado", msg:"Mientras otros todavía están planeando empezar el lunes, tú ya terminaste. Que la semana te tenga miedo." }
+    },
+    {
+      abbr:"MAR", day:"Martes", focus:"Piernas y glúteos",
+      exercises:[
+        WARMUP,
+        { name:"Sentadilla goblet", detail:"3 × 10–12", note:"Mancuerna al pecho. Baja hasta donde la técnica lo permita, talones en el piso." },
+        { name:"Peso muerto rumano", detail:"3 × 10", note:"Con barra. Espalda recta, la barra roza las piernas, siente los isquios." },
+        { name:"Zancadas alternas", detail:"2 × 10 por pierna", note:"Con mancuernas. Rodilla trasera cerca del piso, torso vertical." },
+        { name:"Hip thrust", detail:"3 × 12", note:"Espalda apoyada en el sofá, mancuerna en la cadera. Aprieta glúteos arriba 1 segundo." },
+        { name:"Elevación de talones", detail:"2 × 15", note:"Con mancuernas en las manos. Sube lento, baja más lento." }
+      ],
+      finish:{ title:"Piernas hechas", msg:"Mañana las escaleras serán tu enemigo. Hoy, nada lo es. Así se construye una base que no se rompe." }
+    },
+    {
+      abbr:"MIÉ", day:"Miércoles", focus:"Recuperación activa y core",
+      exercises:[
+        { name:"Caminadora por intervalos", detail:"25–30 min", note:"Alterna 3 min a paso rápido con 2 min suave. Debes poder hablar, pero con esfuerzo." },
+        { name:"Plancha frontal", detail:"3 × máximo con buena forma", note:"Arranca con 20–30 segundos. Cadera alineada, sin hundirla ni subirla." },
+        { name:"Plancha lateral", detail:"2 × 15–20 seg por lado", note:"Cuerpo en línea recta, cadera arriba." },
+        { name:"Superman", detail:"2 × 12", note:"Boca abajo, eleva brazos y piernas a la vez. Pausa arriba de 1 segundo." },
+        { name:"Estiramiento general", detail:"5–10 min", note:"Piernas, espalda, hombros. Respira profundo, sin rebotes." }
+      ],
+      finish:{ title:"Recuperación cumplida", msg:"Descansar también es entrenar, y tú lo haces con la misma disciplina. Hasta en el día suave vas ganando." }
+    },
+    {
+      abbr:"JUE", day:"Jueves", focus:"Jale — espalda y bíceps",
+      exercises:[
+        WARMUP,
+        { name:"Remo con barra inclinado", detail:"3 × 10–12", note:"Torso inclinado, espalda recta. Lleva la barra al ombligo, aprieta escápulas." },
+        { name:"Remo a una mano con mancuerna", detail:"3 × 10 por lado", note:"Apoyado en una silla. Codo pegado al cuerpo, sin girar el torso." },
+        { name:"Pullover en el piso", detail:"2 × 12", note:"Una mancuerna a dos manos, brazos casi rectos, recorrido controlado." },
+        { name:"Curl de bíceps con barra", detail:"2 × 10–12", note:"Codos fijos a los costados, sin balancear el cuerpo." },
+        { name:"Curl martillo", detail:"2 × 12", note:"Agarre neutro. Sube controlado, baja en 2 segundos." }
+      ],
+      finish:{ title:"Espalda y bíceps listos", msg:"Cuatro días seguidos apareciendo. La constancia ya se te nota — y esto apenas empieza." }
+    },
+    {
+      abbr:"VIE", day:"Viernes", focus:"Full body en circuito — 3 vueltas",
+      exercises:[
+        WARMUP,
+        { name:"Sentadilla goblet", detail:"12 reps · vuelta del circuito", note:"Ritmo continuo, técnica primero. Descansa 60–90 seg al terminar cada vuelta completa." },
+        { name:"Flexiones", detail:"10 reps", note:"De rodillas si hace falta. Pecho al piso, cuerpo en línea." },
+        { name:"Remo con barra", detail:"12 reps", note:"Mismo patrón del jueves: espalda recta, barra al ombligo." },
+        { name:"Press militar", detail:"10 reps", note:"Con mancuernas, de pie. Core firme." },
+        { name:"Crunch o elevación de piernas", detail:"15 reps", note:"Movimiento controlado, sin tirar del cuello." },
+        { name:"Vueltas 2 y 3 del circuito", detail:"Repite los 5 ejercicios", note:"Marca este paso cuando completes las tres vueltas del circuito." }
+      ],
+      finish:{ title:"Circuito terminado", msg:"Cinco días seguidos. La mayoría no llega ni al segundo. Tú no eres la mayoría." }
+    },
+    {
+      abbr:"SÁB", day:"Sábado", focus:"Cardio y movilidad",
+      exercises:[
+        { name:"Caminadora a ritmo sostenido", detail:"30–40 min", note:"Ritmo que te deje hablar pero con esfuerzo. Si prefieres salir en cicla, cuenta igual." },
+        { name:"Estiramiento completo", detail:"10 min", note:"Todo el cuerpo, con calma. Es parte del entrenamiento, no un extra." }
+      ],
+      finish:{ title:"Cardio dominado", msg:"El fin de semana frena a casi todo el mundo. A ti no te frenó. Nada lo hace." }
+    },
+    {
+      abbr:"DOM", day:"Domingo", focus:"Descanso activo",
+      exercises:[
+        { name:"Caminata suave", detail:"20–30 min", note:"Caminadora o calle, ritmo tranquilo. Hoy el cuerpo consolida toda la semana." }
+      ],
+      finish:{ title:"Semana completa", msg:"Siete de siete. Esto ya dejó de ser motivación: es disciplina. Y la disciplina es tuya — nadie te la puede quitar." }
+    }
+  ];
+
+  // ---------- Estado (en memoria, sin datos personales) ----------
+  let currentDayIndex = null;
+  let currentExIndex = 0;
+  const completedDays = new Set();
+
+  // ---------- Referencias ----------
+  const viewHome = document.getElementById('viewHome');
+  const viewSession = document.getElementById('viewSession');
+  const viewFinish = document.getElementById('viewFinish');
+  const dayList = document.getElementById('dayList');
+  const progressFill = document.getElementById('progressFill');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function showView(view){
+    [viewHome, viewSession, viewFinish].forEach(v => v.classList.remove('active'));
+    view.classList.add('active');
+    window.scrollTo({top:0});
+  }
+
+  // ---------- Home ----------
+  function renderHome(){
+    dayList.innerHTML = '';
+    ROUTINE.forEach((d, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'day-card' + (completedDays.has(i) ? ' done-today' : '');
+      btn.innerHTML = `
+        <span class="day-abbr">${d.abbr}</span>
+        <span class="day-info">
+          <span class="day-focus">${d.focus}</span>
+          <span class="day-meta">${d.exercises.length} pasos</span>
+        </span>
+        <span class="day-check">✓ Hecho</span>
+        <span class="day-arrow">&rarr;</span>
+      `;
+      btn.addEventListener('click', () => startSession(i));
+      dayList.appendChild(btn);
+    });
+    progressFill.style.width = '0%';
+  }
+
+  // ---------- Sesión ----------
+  function startSession(dayIndex){
+    currentDayIndex = dayIndex;
+    currentExIndex = 0;
+    renderSession();
+    showView(viewSession);
+  }
+
+  function renderSession(){
+    const day = ROUTINE[currentDayIndex];
+    const ex = day.exercises[currentExIndex];
+    const total = day.exercises.length;
+
+    document.getElementById('sessionDay').textContent = day.day;
+    document.getElementById('sessionFocus').textContent = day.focus;
+    document.getElementById('currentNum').textContent = pad(currentExIndex + 1);
+    document.getElementById('totalNum').textContent = pad(total);
+    document.getElementById('exName').textContent = ex.name;
+    document.getElementById('exDetail').textContent = ex.detail;
+    document.getElementById('exNote').textContent = ex.note;
+
+    const isLast = currentExIndex === total - 1;
+    document.getElementById('btnComplete').textContent = isLast ? 'Terminar sesión' : 'Completar ejercicio';
+
+    const list = document.getElementById('upnextList');
+    list.innerHTML = '';
+    day.exercises.forEach((e, i) => {
+      const item = document.createElement('div');
+      item.className = 'upnext-item' + (i < currentExIndex ? ' completed' : '');
+      item.innerHTML = `<span class="dot"></span><span>${e.name} — ${e.detail}</span>`;
+      list.appendChild(item);
+    });
+
+    progressFill.style.width = ((currentExIndex) / total * 100) + '%';
+  }
+
+  function completeExercise(){
+    const day = ROUTINE[currentDayIndex];
+    if(currentExIndex < day.exercises.length - 1){
+      currentExIndex++;
+      renderSession();
+    } else {
+      finishSession();
+    }
+  }
+
+  // ---------- Final ----------
+  function finishSession(){
+    const day = ROUTINE[currentDayIndex];
+    completedDays.add(currentDayIndex);
+    progressFill.style.width = '100%';
+    document.getElementById('finishMark').textContent = day.day + ' · Sesión completada';
+    document.getElementById('finishTitle').textContent = day.finish.title;
+    document.getElementById('finishMsg').textContent = day.finish.msg;
+    showView(viewFinish);
+  }
+
+  // ---------- Eventos ----------
+  document.getElementById('btnComplete').addEventListener('click', completeExercise);
+  document.getElementById('btnBack').addEventListener('click', () => { renderHome(); showView(viewHome); });
+  document.getElementById('btnHome').addEventListener('click', () => { renderHome(); showView(viewHome); });
+
+  renderHome();
+</script>
+</body>
+</html>
