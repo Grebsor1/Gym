@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MI GYM — Rutina semanal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --bg:#0B0B0D;
+    --surface:#141416;
+    --surface-2:#1B1B1F;
+    --line:#26262B;
+    --text:#EDEBE8;
+    --muted:#8B8B93;
+    --red:#C42430;
+    --red-glow:rgba(196,36,48,.35);
+    --red-deep:#7E1219;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+    overflow-x:hidden;
+  }
+
+  .display{
+    font-family:'Oswald',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+
+  /* ---------- Fondo ambiental ---------- */
+  .ambient{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% -10%, rgba(196,36,48,.10), transparent 60%),
+      radial-gradient(ellipse 50% 35% at 10% 110%, rgba(196,36,48,.07), transparent 60%);
+    animation:ambientDrift 14s ease-in-out infinite alternate;
+  }
+  @keyframes ambientDrift{
+    from{transform:translateY(0) scale(1);opacity:.85;}
+    to{transform:translateY(-18px) scale(1.04);opacity:1;}
+  }
+  .grid-lines{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background-image:
+      linear-gradient(rgba(237,235,232,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(237,235,232,.025) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse 90% 70% at 50% 30%, #000 30%, transparent 100%);
+    -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 30%, #000 30%, transparent 100%);
+  }
+
+  .app{
+    position:relative;
+    z-index:1;
+    max-width:680px;
+    margin:0 auto;
+    padding:32px 20px 60px;
+    min-height:100%;
+  }
+
+  /* ---------- Barra de progreso global ---------- */
+  .progress-track{
+    position:fixed;
+    top:0;left:0;right:0;
+    height:3px;
+    background:var(--line);
+    z-index:10;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--red-deep), var(--red));
+    box-shadow:0 0 12px var(--red-glow);
+    transition:width .45s cubic-bezier(.22,1,.36,1);
+  }
+
+  /* ---------- Cabecera ---------- */
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:36px;
+  }
+  .brand{
+    font-size:1.05rem;
+    font-weight:600;
+    letter-spacing:.22em;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand span{color:var(--red);}
+  .brand::before{
+    content:'';
+    width:8px;height:8px;
+    border-radius:50%;
+    background:var(--red);
+    box-shadow:0 0 0 0 var(--red-glow);
+    animation:pulse 2.4s ease-out infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 var(--red-glow);}
+    70%{box-shadow:0 0 0 12px rgba(196,36,48,0);}
+    100%{box-shadow:0 0 0 0 rgba(196,36,48,0);}
+  }
+  .header-sub{
+    font-size:.72rem;
+    color:var(--muted);
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+
+  /* ---------- Vistas ---------- */
+  .view{display:none;}
+  .view.active{display:block;animation:fadeUp .4s ease both;}
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(12px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* ---------- Home ---------- */
+  .home-title{
+    font-size:clamp(2rem,6vw,2.8rem);
+    font-weight:600;
+    line-height:1.1;
+    margin-bottom:6px;
+  }
+  .home-title em{font-style:normal;color:var(--red);}
+  .home-sub{
+    color:var(--muted);
+    font-size:.9rem;
+    margin-bottom:22px;
+  }
+
+  .week-progress{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:26px;
+  }
+  .week-bar{
+    flex:1;
+    height:6px;
+    background:var(--surface-2);
+    border-radius:99px;
+    overflow:hidden;
+  }
+  .week-bar-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, var(--red-deep), var(--red));
+    border-radius:99px;
+    box-shadow:0 0 10px var(--red-glow);
+    transition:width .8s cubic-bezier(.22,1,.36,1);
+  }
+  .week-label{
+    font-family:'Oswald',sans-serif;
+    font-size:.85rem;
+    letter-spacing:.1em;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .week-label b{color:var(--red);font-weight:600;}
+
+  .day-list{display:flex;flex-direction:column;gap:10px;}
+  .day-card{
+    display:flex;
+    align-items:center;
+    gap:18px;
+    width:100%;
+    text-align:left;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px 18px;
+    color:var(--text);
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:border-color .25s ease, background .25s ease, transform .25s ease, box-shadow .25s ease;
+    opacity:0;
+    animation:cardIn .5s cubic-bezier(.22,1,.36,1) forwards;
+  }
+  @keyframes cardIn{
+    from{opacity:0;transform:translateY(16px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  .day-card::after{
+    content:'';
+    position:absolute;
+    top:0;left:-80%;
+    width:50%;height:100%;
+    background:linear-gradient(105deg, transparent, rgba(237,235,232,.05), transparent);
+    transform:skewX(-20deg);
+    transition:left .5s ease;
+    pointer-events:none;
+  }
+  .day-card:hover{
+    border-color:var(--red);
+    background:var(--surface-2);
+    transform:translateY(-2px);
+    box-shadow:0 8px 24px rgba(0,0,0,.45), 0 0 0 1px rgba(196,36,48,.15);
+  }
+  .day-card:hover::after{left:120%;}
+  .day-card:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+  .day-abbr{
+    font-family:'Oswald',sans-serif;
+    font-size:1.15rem;
+    font-weight:600;
+    letter-spacing:.1em;
+    color:var(--red);
+    width:52px;
+    flex-shrink:0;
+  }
+  .day-info{flex:1;min-width:0;}
+  .day-focus{font-weight:600;font-size:.98rem;}
+  .day-meta{font-size:.78rem;color:var(--muted);margin-top:2px;}
+  .day-arrow{
+    color:var(--muted);
+    font-size:1.1rem;
+    transition:transform .25s ease,color .25s ease;
+  }
+  .day-card:hover .day-arrow{transform:translateX(5px);color:var(--red);}
+  .day-card.done-today .day-abbr{color:var(--muted);}
+  .day-card .day-check{display:none;color:var(--red);font-size:.95rem;margin-left:auto;}
+  .day-card.done-today .day-check{display:inline;}
+  .day-card.done-today .day-arrow{display:none;}
+
+  /* ---------- Sesión ---------- */
+  .session-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:28px;
+  }
+  .btn-ghost{
+    background:none;border:none;
+    color:var(--muted);
+    font-family:'Inter',sans-serif;
+    font-size:.82rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    cursor:pointer;
+    padding:6px 2px;
+    transition:color .2s ease;
+  }
+  .btn-ghost:hover{color:var(--text);}
+  .btn-ghost:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+  .session-day{
+    font-size:.78rem;
+    letter-spacing:.2em;
+    text-transform:uppercase;
+    color:var(--red);
+    font-weight:600;
+  }
+
+  .counter{
+    font-family:'Oswald',sans-serif;
+    font-size:clamp(3.4rem,14vw,5.2rem);
+    font-weight:600;
+    line-height:1;
+    letter-spacing:.02em;
+    margin-bottom:2px;
+  }
+  .counter .num{display:inline-block;}
+  .counter .num.tick{animation:numTick .35s cubic-bezier(.22,1,.36,1);}
+  @keyframes numTick{
+    0%{opacity:0;transform:translateY(.35em);}
+    100%{opacity:1;transform:translateY(0);}
+  }
+  .counter .total{color:var(--muted);font-size:.45em;font-weight:400;}
+
+  .session-focus{
+    color:var(--muted);
+    font-size:.85rem;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    margin-bottom:30px;
+  }
+
+  .exercise-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-left:3px solid var(--red);
+    border-radius:12px;
+    padding:28px 24px;
+    margin-bottom:24px;
+    transition:opacity .22s ease, transform .22s ease;
+  }
+  .exercise-card.leaving{opacity:0;transform:translateX(-22px);}
+  .exercise-card.entering{animation:exIn .3s cubic-bezier(.22,1,.36,1) both;}
+  @keyframes exIn{
+    from{opacity:0;transform:translateX(26px);}
+    to{opacity:1;transform:translateX(0);}
+  }
+  .exercise-name{
+    font-size:clamp(1.4rem,5vw,1.9rem);
+    font-weight:500;
+    line-height:1.2;
+    margin-bottom:12px;
+  }
+  .exercise-detail{
+    font-family:'Oswald',sans-serif;
+    font-size:1.05rem;
+    letter-spacing:.08em;
+    color:var(--red);
+    text-transform:uppercase;
+  }
+  .exercise-note{margin-top:14px;color:var(--muted);font-size:.88rem;}
+
+  .btn-primary{
+    display:block;
+    width:100%;
+    background:var(--red);
+    color:#fff;
+    border:none;
+    border-radius:10px;
+    padding:16px;
+    font-family:'Oswald',sans-serif;
+    font-size:1.05rem;
+    font-weight:500;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+    transition:background .2s ease,transform .1s ease, box-shadow .25s ease;
+  }
+  .btn-primary:hover{background:#A81C27;box-shadow:0 6px 22px var(--red-glow);}
+  .btn-primary:active{transform:scale(.98);}
+  .btn-primary:focus-visible{outline:2px solid var(--text);outline-offset:2px;}
+  .btn-primary .ripple{
+    position:absolute;
+    border-radius:50%;
+    background:rgba(255,255,255,.35);
+    transform:scale(0);
+    animation:ripple .55s ease-out forwards;
+    pointer-events:none;
+  }
+  @keyframes ripple{to{transform:scale(3);opacity:0;}}
+
+  .upnext{margin-top:34px;}
+  .upnext-label{
+    font-size:.72rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:12px;
+  }
+  .upnext-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-size:.9rem;
+    color:var(--muted);
+    transition:color .3s ease;
+  }
+  .upnext-item:last-child{border-bottom:none;}
+  .upnext-item .dot{
+    width:5px;height:5px;
+    border-radius:50%;
+    background:var(--line);
+    flex-shrink:0;
+    transition:background .3s ease, box-shadow .3s ease;
+  }
+  .upnext-item.current{color:var(--text);}
+  .upnext-item.current .dot{background:var(--red);box-shadow:0 0 8px var(--red-glow);}
+  .upnext-item.completed{
+    color:#4E4E55;
+    text-decoration:line-through;
+    text-decoration-color:var(--red-deep);
+  }
+  .upnext-item.completed .dot{background:var(--red-deep);}
+
+  /* ---------- Temporizador de descanso ---------- */
+  .timer-overlay{
+    position:fixed;
+    inset:0;
+    z-index:50;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(11,11,13,.9);
+    backdrop-filter:blur(6px);
+    -webkit-backdrop-filter:blur(6px);
+  }
+  .timer-overlay.active{display:flex;animation:fadeUp .3s ease both;}
+  .timer-box{text-align:center;padding:20px;}
+  .timer-label{
+    font-family:'Oswald',sans-serif;
+    font-size:.8rem;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:var(--red);
+    margin-bottom:24px;
+  }
+  .timer-ring{position:relative;width:190px;height:190px;margin:0 auto 28px;}
+  .timer-ring svg{transform:rotate(-90deg);width:100%;height:100%;}
+  .timer-ring circle{fill:none;stroke-width:6;}
+  .ring-bg{stroke:var(--line);}
+  .ring-fg{
+    stroke:var(--red);
+    stroke-linecap:round;
+    filter:drop-shadow(0 0 6px var(--red-glow));
+    transition:stroke-dashoffset 1s linear;
+  }
+  .timer-num{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'Oswald',sans-serif;
+    font-size:3rem;
+    font-weight:600;
+  }
+  .timer-actions{display:flex;gap:12px;justify-content:center;}
+  .btn-outline{
+    background:none;
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:8px;
+    padding:11px 20px;
+    font-family:'Oswald',sans-serif;
+    font-size:.9rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:border-color .2s ease, color .2s ease;
+  }
+  .btn-outline:hover{border-color:var(--red);color:var(--red);}
+  .btn-outline:focus-visible{outline:2px solid var(--red);outline-offset:2px;}
+
+  /* ---------- Final ---------- */
+  #viewFinish{position:relative;}
+  .finish{
+    text-align:center;
+    padding-top:7vh;
+    position:relative;
+    z-index:2;
+  }
+  #sparks{
+    position:fixed;
+    inset:0;
+    z-index:1;
+    pointer-events:none;
+  }
+  .finish-stamp{
+    width:84px;height:84px;
+    margin:0 auto 26px;
+  }
+  .finish-stamp circle{
+    fill:none;
+    stroke:var(--red);
+    stroke-width:3;
+    stroke-dasharray:264;
+    stroke-dashoffset:264;
+    animation:drawRing .7s ease-out .1s forwards;
+  }
+  .finish-stamp path{
+    fill:none;
+    stroke:var(--red);
+    stroke-width:5;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    stroke-dasharray:60;
+    stroke-dashoffset:60;
+    animation:drawRing .45s ease-out .7s forwards;
+    filter:drop-shadow(0 0 8px var(--red-glow));
+  }
+  @keyframes drawRing{to{stroke-dashoffset:0;}}
+  .finish-mark{
+    font-family:'Oswald',sans-serif;
+    font-size:.8rem;
+    letter-spacing:.3em;
+    text-transform:uppercase;
+    color:var(--red);
+    margin-bottom:22px;
+  }
+  .finish-title{
+    font-size:clamp(2rem,7vw,3rem);
+    font-weight:600;
+    line-height:1.15;
+    margin-bottom:20px;
+  }
+  .finish-msg{
+    color:var(--muted);
+    font-size:1.02rem;
+    max-width:440px;
+    margin:0 auto 40px;
+  }
+  .finish .btn-primary{max-width:320px;margin:0 auto;}
+  .divider{
+    width:0;height:2px;
+    background:var(--red);
+    margin:0 auto 26px;
+    animation:growLine .6s ease-out .4s forwards;
+  }
+  @keyframes growLine{to{width:44px;}}
+
+  /* ---------- Movimiento reducido ---------- */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+    }
+    .ambient{animation:none;}
+    #sparks{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="ambient"></div>
+<div class="grid-lines"></div>
+<div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+<canvas id="sparks"></canvas>
+
+<div class="app">
+  <header>
+    <div class="brand display">MI<span>/</span>GYM</div>
+    <div class="header-sub">Rutina semanal</div>
+  </header>
+
+  <!-- ===== HOME ===== -->
+  <section class="view active" id="viewHome">
+    <h1 class="home-title display">Elige tu <em>día</em></h1>
+    <p class="home-sub">Un ejercicio a la vez. Sin excusas, sin atajos.</p>
+    <div class="week-progress">
+      <div class="week-bar"><div class="week-bar-fill" id="weekBarFill"></div></div>
+      <div class="week-label display"><b id="weekCount">0</b> / 7 esta semana</div>
+    </div>
+    <div class="day-list" id="dayList"></div>
+  </section>
+
+  <!-- ===== SESIÓN ===== -->
+  <section class="view" id="viewSession">
+    <div class="session-top">
+      <button class="btn-ghost" id="btnBack" type="button">&larr; Días</button>
+      <span class="session-day display" id="sessionDay"></span>
+    </div>
+
+    <div class="counter display"><span class="num" id="currentNum">01</span><span class="total"> / <span id="totalNum">05</span></span></div>
+    <div class="session-focus" id="sessionFocus"></div>
+
+    <div class="exercise-card" id="exCard">
+      <div class="exercise-name" id="exName"></div>
+      <div class="exercise-detail display" id="exDetail"></div>
+      <div class="exercise-note" id="exNote"></div>
+    </div>
+
+    <button class="btn-primary" id="btnComplete" type="button">Completar ejercicio</button>
+
+    <div class="upnext">
+      <div class="upnext-label">Sesión completa</div>
+      <div id="upnextList"></div>
+    </div>
+  </section>
+
+  <!-- ===== FINAL ===== -->
+  <section class="view" id="viewFinish">
+    <div class="finish">
+      <svg class="finish-stamp" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="42"/>
+        <path d="M32 52 L45 65 L70 38"/>
+      </svg>
+      <div class="finish-mark" id="finishMark"></div>
+      <h2 class="finish-title display" id="finishTitle"></h2>
+      <div class="divider"></div>
+      <p class="finish-msg" id="finishMsg"></p>
+      <button class="btn-primary" id="btnHome" type="button">Volver a los días</button>
+    </div>
+  </section>
+</div>
+
+<!-- ===== TEMPORIZADOR DE DESCANSO ===== -->
+<div class="timer-overlay" id="timerOverlay" role="dialog" aria-label="Descanso entre ejercicios">
+  <div class="timer-box">
+    <div class="timer-label">Descanso</div>
+    <div class="timer-ring">
+      <svg viewBox="0 0 120 120">
+        <circle class="ring-bg" cx="60" cy="60" r="54"/>
+        <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="54"/>
+      </svg>
+      <div class="timer-num" id="timerNum">75</div>
+    </div>
+    <div class="timer-actions">
+      <button class="btn-outline" id="btnAdd15" type="button">+15 s</button>
+      <button class="btn-outline" id="btnSkip" type="button">Saltar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const WARMUP = { name:"Calentamiento", detail:"5–8 min caminadora + movilidad", note:"Paso rápido en la caminadora. Círculos de brazos, sentadillas sin peso y rotaciones de cadera.", rest:false };
+
+  const ROUTINE = [
+    {
+      abbr:"LUN", day:"Lunes", focus:"Empuje — pecho, hombros, tríceps",
+      exercises:[
+        WARMUP,
+        { name:"Press de pecho en el piso", detail:"3 × 10–12", note:"Con barra o mancuernas. Baja controlado, codos a 45°." },
+        { name:"Press militar de pie", detail:"3 × 10", note:"Con mancuernas. Core apretado, sin arquear la espalda baja." },
+        { name:"Aperturas en el piso", detail:"2 × 12", note:"Codos ligeramente flexionados todo el recorrido." },
+        { name:"Elevaciones laterales", detail:"2 × 12–15", note:"Peso liviano. Sube hasta la altura de los hombros, sin balancearte." },
+        { name:"Extensión de tríceps sobre la cabeza", detail:"2 × 12", note:"Una mancuerna a dos manos. Codos apuntando al frente." }
+      ],
+      finish:{ title:"Empuje completado", msg:"Mientras otros todavía están planeando empezar el lunes, tú ya terminaste. Que la semana te tenga miedo." }
+    },
+    {
+      abbr:"MAR", day:"Martes", focus:"Piernas y glúteos",
+      exercises:[
+        WARMUP,
+        { name:"Sentadilla goblet", detail:"3 × 10–12", note:"Mancuerna al pecho. Baja hasta donde la técnica lo permita, talones en el piso." },
+        { name:"Peso muerto rumano", detail:"3 × 10", note:"Con barra. Espalda recta, la barra roza las piernas, siente los isquios." },
+        { name:"Zancadas alternas", detail:"2 × 10 por pierna", note:"Con mancuernas. Rodilla trasera cerca del piso, torso vertical." },
+        { name:"Hip thrust", detail:"3 × 12", note:"Espalda apoyada en el sofá, mancuerna en la cadera. Aprieta glúteos arriba 1 segundo." },
+        { name:"Elevación de talones", detail:"2 × 15", note:"Con mancuernas en las manos. Sube lento, baja más lento." }
+      ],
+      finish:{ title:"Piernas hechas", msg:"Mañana las escaleras serán tu enemigo. Hoy, nada lo es. Así se construye una base que no se rompe." }
+    },
+    {
+      abbr:"MIÉ", day:"Miércoles", focus:"Recuperación activa y core",
+      exercises:[
+        { name:"Caminadora por intervalos", detail:"25–30 min", note:"Alterna 3 min a paso rápido con 2 min suave. Debes poder hablar, pero con esfuerzo.", rest:false },
+        { name:"Plancha frontal", detail:"3 × máximo con buena forma", note:"Arranca con 20–30 segundos. Cadera alineada, sin hundirla ni subirla." },
+        { name:"Plancha lateral", detail:"2 × 15–20 seg por lado", note:"Cuerpo en línea recta, cadera arriba." },
+        { name:"Superman", detail:"2 × 12", note:"Boca abajo, eleva brazos y piernas a la vez. Pausa arriba de 1 segundo." },
+        { name:"Estiramiento general", detail:"5–10 min", note:"Piernas, espalda, hombros. Respira profundo, sin rebotes.", rest:false }
+      ],
+      finish:{ title:"Recuperación cumplida", msg:"Descansar también es entrenar, y tú lo haces con la misma disciplina. Hasta en el día suave vas ganando." }
+    },
+    {
+      abbr:"JUE", day:"Jueves", focus:"Jale — espalda y bíceps",
+      exercises:[
+        WARMUP,
+        { name:"Remo con barra inclinado", detail:"3 × 10–12", note:"Torso inclinado, espalda recta. Lleva la barra al ombligo, aprieta escápulas." },
+        { name:"Remo a una mano con mancuerna", detail:"3 × 10 por lado", note:"Apoyado en una silla. Codo pegado al cuerpo, sin girar el torso." },
+        { name:"Pullover en el piso", detail:"2 × 12", note:"Una mancuerna a dos manos, brazos casi rectos, recorrido controlado." },
+        { name:"Curl de bíceps con barra", detail:"2 × 10–12", note:"Codos fijos a los costados, sin balancear el cuerpo." },
+        { name:"Curl martillo", detail:"2 × 12", note:"Agarre neutro. Sube controlado, baja en 2 segundos." }
+      ],
+      finish:{ title:"Espalda y bíceps listos", msg:"Cuatro días seguidos apareciendo. La constancia ya se te nota — y esto apenas empieza." }
+    },
+    {
+      abbr:"VIE", day:"Viernes", focus:"Full body en circuito — 3 vueltas",
+      exercises:[
+        WARMUP,
+        { name:"Sentadilla goblet", detail:"12 reps · vuelta del circuito", note:"Ritmo continuo, técnica primero. Descansa 60–90 seg al terminar cada vuelta completa.", rest:false },
+        { name:"Flexiones", detail:"10 reps", note:"De rodillas si hace falta. Pecho al piso, cuerpo en línea.", rest:false },
+        { name:"Remo con barra", detail:"12 reps", note:"Mismo patrón del jueves: espalda recta, barra al ombligo.", rest:false },
+        { name:"Press militar", detail:"10 reps", note:"Con mancuernas, de pie. Core firme.", rest:false },
+        { name:"Crunch o elevación de piernas", detail:"15 reps", note:"Movimiento controlado, sin tirar del cuello.", rest:true },
+        { name:"Vueltas 2 y 3 del circuito", detail:"Repite los 5 ejercicios", note:"Marca este paso cuando completes las tres vueltas del circuito.", rest:false }
+      ],
+      finish:{ title:"Circuito terminado", msg:"Cinco días seguidos. La mayoría no llega ni al segundo. Tú no eres la mayoría." }
+    },
+    {
+      abbr:"SÁB", day:"Sábado", focus:"Cardio y movilidad",
+      exercises:[
+        { name:"Caminadora a ritmo sostenido", detail:"30–40 min", note:"Ritmo que te deje hablar pero con esfuerzo. Si prefieres salir en cicla, cuenta igual.", rest:false },
+        { name:"Estiramiento completo", detail:"10 min", note:"Todo el cuerpo, con calma. Es parte del entrenamiento, no un extra.", rest:false }
+      ],
+      finish:{ title:"Cardio dominado", msg:"El fin de semana frena a casi todo el mundo. A ti no te frenó. Nada lo hace." }
+    },
+    {
+      abbr:"DOM", day:"Domingo", focus:"Descanso activo",
+      exercises:[
+        { name:"Caminata suave", detail:"20–30 min", note:"Caminadora o calle, ritmo tranquilo. Hoy el cuerpo consolida toda la semana.", rest:false }
+      ],
+      finish:{ title:"Semana completa", msg:"Siete de siete. Esto ya dejó de ser motivación: es disciplina. Y la disciplina es tuya — nadie te la puede quitar." }
+    }
+  ];
+
+  // ---------- Estado (en memoria, sin datos personales) ----------
+  let currentDayIndex = null;
+  let currentExIndex = 0;
+  const completedDays = new Set();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- Referencias ----------
+  const viewHome = document.getElementById('viewHome');
+  const viewSession = document.getElementById('viewSession');
+  const viewFinish = document.getElementById('viewFinish');
+  const dayList = document.getElementById('dayList');
+  const progressFill = document.getElementById('progressFill');
+  const exCard = document.getElementById('exCard');
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+
+  function showView(view){
+    [viewHome, viewSession, viewFinish].forEach(v => v.classList.remove('active'));
+    view.classList.add('active');
+    window.scrollTo({top:0});
+    if(view !== viewFinish) stopSparks();
+  }
+
+  // ---------- Home ----------
+  function renderHome(){
+    dayList.innerHTML = '';
+    ROUTINE.forEach((d, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'day-card' + (completedDays.has(i) ? ' done-today' : '');
+      btn.style.animationDelay = (i * 60) + 'ms';
+      btn.innerHTML = `
+        <span class="day-abbr">${d.abbr}</span>
+        <span class="day-info">
+          <span class="day-focus">${d.focus}</span>
+          <span class="day-meta">${d.exercises.length} pasos</span>
+        </span>
+        <span class="day-check">✓ Hecho</span>
+        <span class="day-arrow">&rarr;</span>
+      `;
+      btn.addEventListener('click', () => startSession(i));
+      dayList.appendChild(btn);
+    });
+    progressFill.style.width = '0%';
+    document.getElementById('weekCount').textContent = completedDays.size;
+    requestAnimationFrame(() => {
+      document.getElementById('weekBarFill').style.width = (completedDays.size / 7 * 100) + '%';
+    });
+  }
+
+  // ---------- Sesión ----------
+  function startSession(dayIndex){
+    currentDayIndex = dayIndex;
+    currentExIndex = 0;
+    renderSession(false);
+    showView(viewSession);
+  }
+
+  function renderSession(animate){
+    const day = ROUTINE[currentDayIndex];
+    const ex = day.exercises[currentExIndex];
+    const total = day.exercises.length;
+
+    document.getElementById('sessionDay').textContent = day.day;
+    document.getElementById('sessionFocus').textContent = day.focus;
+    document.getElementById('totalNum').textContent = pad(total);
+    document.getElementById('exName').textContent = ex.name;
+    document.getElementById('exDetail').textContent = ex.detail;
+    document.getElementById('exNote').textContent = ex.note;
+
+    const numEl = document.getElementById('currentNum');
+    numEl.textContent = pad(currentExIndex + 1);
+    if(animate && !reducedMotion){
+      numEl.classList.remove('tick');
+      void numEl.offsetWidth;
+      numEl.classList.add('tick');
+      exCard.classList.remove('leaving');
+      exCard.classList.add('entering');
+      setTimeout(() => exCard.classList.remove('entering'), 320);
+    }
+
+    const isLast = currentExIndex === total - 1;
+    document.getElementById('btnComplete').textContent = isLast ? 'Terminar sesión' : 'Completar ejercicio';
+
+    const list = document.getElementById('upnextList');
+    list.innerHTML = '';
+    day.exercises.forEach((e, i) => {
+      const item = document.createElement('div');
+      let cls = 'upnext-item';
+      if(i < currentExIndex) cls += ' completed';
+      if(i === currentExIndex) cls += ' current';
+      item.className = cls;
+      item.innerHTML = `<span class="dot"></span><span>${e.name} — ${e.detail}</span>`;
+      list.appendChild(item);
+    });
+
+    progressFill.style.width = (currentExIndex / total * 100) + '%';
+  }
+
+  function advance(){
+    const day = ROUTINE[currentDayIndex];
+    if(currentExIndex < day.exercises.length - 1){
+      currentExIndex++;
+      renderSession(true);
+    } else {
+      finishSession();
+    }
+  }
+
+  function completeExercise(){
+    const day = ROUTINE[currentDayIndex];
+    const ex = day.exercises[currentExIndex];
+    const isLast = currentExIndex === day.exercises.length - 1;
+
+    if(!reducedMotion && !isLast){
+      exCard.classList.add('leaving');
+    }
+
+    // Descanso entre ejercicios (salvo pasos marcados con rest:false y el último)
+    const needsRest = ex.rest !== false && !isLast;
+    if(needsRest){
+      startRestTimer(advance);
+    } else {
+      setTimeout(advance, reducedMotion ? 0 : 180);
+    }
+  }
+
+  // ---------- Temporizador de descanso ----------
+  const timerOverlay = document.getElementById('timerOverlay');
+  const ringFg = document.getElementById('ringFg');
+  const timerNum = document.getElementById('timerNum');
+  const CIRC = 2 * Math.PI * 54;
+  ringFg.style.strokeDasharray = CIRC;
+
+  let timerInterval = null;
+  let timeLeft = 0;
+  let timeTotal = 0;
+  let onTimerDone = null;
+
+  function startRestTimer(callback){
+    onTimerDone = callback;
+    timeTotal = 75; // 60–90 seg, punto medio
+    timeLeft = timeTotal;
+    updateTimerUI();
+    timerOverlay.classList.add('active');
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      updateTimerUI();
+      if(timeLeft <= 0) endRestTimer();
+    }, 1000);
+  }
+
+  function updateTimerUI(){
+    timerNum.textContent = timeLeft;
+    const frac = Math.max(timeLeft / timeTotal, 0);
+    ringFg.style.strokeDashoffset = CIRC * (1 - frac);
+  }
+
+  function endRestTimer(){
+    clearInterval(timerInterval);
+    timerInterval = null;
+    timerOverlay.classList.remove('active');
+    if(onTimerDone){ const cb = onTimerDone; onTimerDone = null; cb(); }
+  }
+
+  document.getElementById('btnSkip').addEventListener('click', endRestTimer);
+  document.getElementById('btnAdd15').addEventListener('click', () => {
+    timeLeft += 15;
+    timeTotal = Math.max(timeTotal, timeLeft);
+    updateTimerUI();
+  });
+
+  // ---------- Final ----------
+  function finishSession(){
+    const day = ROUTINE[currentDayIndex];
+    completedDays.add(currentDayIndex);
+    // Al terminar el domingo, la semana se reinicia: se limpian todos los "Hecho"
+    if(currentDayIndex === ROUTINE.length - 1){
+      completedDays.clear();
+    }
+    progressFill.style.width = '100%';
+    document.getElementById('finishMark').textContent = day.day + ' · Sesión completada';
+    document.getElementById('finishTitle').textContent = day.finish.title;
+    document.getElementById('finishMsg').textContent = day.finish.msg;
+
+    // Reiniciar animaciones del sello y la línea
+    const stamp = document.querySelector('.finish-stamp');
+    const divider = document.querySelector('.divider');
+    stamp.style.animation = 'none'; divider.style.animation = 'none';
+    stamp.querySelectorAll('circle,path').forEach(el => { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; });
+    void stamp.offsetWidth; void divider.offsetWidth;
+    stamp.style.animation = ''; divider.style.animation = '';
+
+    showView(viewFinish);
+    if(!reducedMotion) startSparks();
+  }
+
+  // ---------- Chispas (canvas) ----------
+  const canvas = document.getElementById('sparks');
+  const ctx = canvas.getContext('2d');
+  let sparks = [];
+  let sparksActive = false;
+
+  function resizeCanvas(){
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function spawnSpark(){
+    return {
+      x: Math.random() * canvas.width,
+      y: canvas.height + 10,
+      vx: (Math.random() - .5) * .5,
+      vy: -(0.7 + Math.random() * 1.6),
+      size: 1 + Math.random() * 2.4,
+      life: 1,
+      decay: .003 + Math.random() * .006,
+      hue: 350 + Math.random() * 15
+    };
+  }
+
+  function startSparks(){
+    sparksActive = true;
+    sparks = Array.from({length: 55}, () => {
+      const s = spawnSpark();
+      s.y = canvas.height * (0.4 + Math.random() * 0.6);
+      return s;
+    });
+    requestAnimationFrame(sparkLoop);
+  }
+
+  function stopSparks(){
+    sparksActive = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  function sparkLoop(){
+    if(!sparksActive) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    sparks.forEach((s, i) => {
+      s.x += s.vx + Math.sin(s.y * .01) * .3;
+      s.y += s.vy;
+      s.life -= s.decay;
+      if(s.life <= 0 || s.y < -10) sparks[i] = spawnSpark();
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${s.hue}, 75%, 52%, ${s.life * .55})`;
+      ctx.shadowColor = 'rgba(196,36,48,.8)';
+      ctx.shadowBlur = 8;
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(sparkLoop);
+  }
+
+  // ---------- Ripple en botones ----------
+  document.querySelectorAll('.btn-primary').forEach(btn => {
+    btn.addEventListener('click', function(e){
+      if(reducedMotion) return;
+      const rect = this.getBoundingClientRect();
+      const r = document.createElement('span');
+      const size = Math.max(rect.width, rect.height);
+      r.className = 'ripple';
+      r.style.width = r.style.height = size + 'px';
+      r.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      r.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      this.appendChild(r);
+      setTimeout(() => r.remove(), 600);
+    });
+  });
+
+  // ---------- Eventos ----------
+  document.getElementById('btnComplete').addEventListener('click', completeExercise);
+  document.getElementById('btnBack').addEventListener('click', () => { onTimerDone = null; endRestTimer(); renderHome(); showView(viewHome); });
+  document.getElementById('btnHome').addEventListener('click', () => { renderHome(); showView(viewHome); });
+
+  renderHome();
+</script>
+</body>
+</html>
